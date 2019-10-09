@@ -15,7 +15,7 @@ typedef void (*hash_destruir_dato_t)(void *);
 
 
 /* ******************************************************************
- *                    PRIMITIVAS DE HASH
+ *                PRIMITIVAS DE ITERADOR DE HASH
  * *****************************************************************/
 
 // Dada una funcion para destruir campos, crea una tabla de hash
