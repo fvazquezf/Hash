@@ -23,7 +23,8 @@ typedef void (*hash_destruir_dato_t)(void *);
 // Post: devuelve una nueva tabla de hash, en caso de error de destruye
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato);
 
-// Dada una clave y un valor, se guarda el registro en el hash
+// Dada una clave y un valor, se guarda el registro en el hash. si la clave ya existe
+// reemplaza el valor.
 // Pre: la tabla de hash esta creada
 // Post: se guardo el registro en el hash y devuelve true, false en caso de error
 bool hash_guardar(hash_t *hash, const char *clave, void *dato);
@@ -31,6 +32,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato);
 // Dada una clave, se borra el registro y se devuelve el valor asociado
 // Pre: la tabla de hash esta creada
 // Post: se eliminó el registro del hash y se devuelve el valor asociado
+// Si la clave no existe devuelve NULL
 // En caso de error, devuelve NULL
 void *hash_borrar(hash_t *hash, const char *clave);
 
@@ -45,7 +47,7 @@ bool hash_pertenece(const hash_t *hash, const char *clave);
 
 // Devuelve la cantidad de elementos en el hash
 // Pre: la tabla de hash esta creada
-size_t hash_cantidad(const hash_t *hash);z
+size_t hash_cantidad(const hash_t *hash);
 
 // Se destruye el hash y todos sus registros
 // Pre: la tabla de hash esta creada
