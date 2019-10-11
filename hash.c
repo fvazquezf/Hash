@@ -42,7 +42,7 @@ void rellena_tabla_null(lista_t** hash, size_t capacidad){
 }
  
 /* ******************************************************************
- *						PRIMITIVAS DE HASH
+ *			PRIMITIVAS DE HASH
  * *****************************************************************/
  
  hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
