@@ -46,21 +46,7 @@ void rellena_tabla_null(lista_t** hash, size_t capacidad){
  * *****************************************************************/
  
  hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
-	hash_t* hash = malloc(sizeof(hash_t));
-	if (hash == NULL){
-		return NULL;
-	}
-	
-	hash->capacidad = TABLA_CAPACIDAD_INICIAL;
-	hash->tabla_h = malloc(hash->capacidad*sizeof(lista_t));
-	if (tabla_h == NULL){
-		free(hash);
-		return NULL;
-	}
-	hash->cantidad = TABLA_CANTIDAD_INICIAL;
-	hash->destruir_dato = destruir_dato;
-	rellena_tabla_null(hash->tabla_h,hash->capacidad);
-	return hash;
+	return wrapper_hash_crear(hash_destruir_dato_t destruir_dato,size_t TABLA_CAPACIDAD_INICIAL,size_t TABLA_CANTIDAD_INICIAL);
 }
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
@@ -80,6 +66,46 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 	return bool_resultado;
 }
 
+hash_t *wrapper_hash_crear(hash_destruir_dato_t destruir_dato,size_t nueva_capacidad,size_t cantidad){
+	hash_t* hash = malloc(sizeof(hash_t));
+	if (hash == NULL){
+		return NULL;
+	}
+	hash->capacidad = nueva_capacidad;
+	hash->tabla_h = malloc(hash->capacidad*sizeof(lista_t));
+	if (hash->tabla_h == NULL){
+		free(hash);
+		return NULL;
+	}
+	hash->cantidad = cantidad;
+	hash->destruir_dato = destruir_dato;
+	if (cantidad == TABLA_CANTIDAD_INICIAL){
+		rellena_tabla_null(hash->tabla_h,hash->capacidad);
+	}
+	return hash;
+}
+
+
+
+
+/*
+void *hash_borrar(hash_t *hash, const char *clave){
+
+}
+
+void *hash_obtener(const hash_t *hash, const char *clave){
+
+}
+
+bool hash_pertenece(const hash_t *hash, const char *clave){
+
+}
+
 size_t hash_cantidad(const hash_t *hash){
 	return hash->cantidad;
 }
+void hash_destruir(hash_t *hash){
+	free(hash);
+}
+
+*/
