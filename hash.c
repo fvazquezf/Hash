@@ -1,7 +1,7 @@
 #include "hash.h"
 #include "lista.h"
 #include <stdlib.h>
-
+#include <string.h>
 
 #define FACTOR_DE_CARGA 1
 #define MULTIPLICADOR_TABLA_CAPACIDAD 2
@@ -23,7 +23,6 @@ struct hash{
 	size_t capacidad;
 	size_t cantidad;
 	hash_destruir_dato_t* destruir_dato;
-
 };
 
 /* ******************************************************************
@@ -43,13 +42,13 @@ void rellena_tabla_null(lista_t** tabla_h, size_t capacidad){
 		tabla_h[i] = NULL;
 	}
 }
-unsigned long hashing(unsigned char *str,size_t capacidad_tabla){
+unsigned long hashing(unsigned char *str,size_t capacidad){
 	unsigned long h = 5381;
 	int c;
 	while (c = *str++){
 		h = ((h << 5) + h) + c;
 	}
-	return h%capacidad_tabla;
+	return h%capacidad;
 }
 
 campo_t* crear_campo(const char *clave, void *dato){
@@ -88,7 +87,7 @@ bool wrapper_hash_guardar(lista_t** tabla_h,size_t capacidad, const char *clave,
 	}
 
 	//Entra si fallo lista_insertar()
-	if (lista_insertar_primero(tabla_h[posicion],(void*)campo) == false){
+	if (!lista_insertar_primero(tabla_h[posicion],(void*)campo)){
 		borrar_campo(campo);
 		if(lista_esta_vacia(tabla_h[posicion])){
 			lista_destruir(tabla_h[posicion],NULL);
@@ -114,6 +113,7 @@ bool hash_redimensionar(lista_t** tabla_h,size_t capacidad){
 		}
 	}
 	tabla_h = tabla_nueva;
+	return true;
 }
 
 /* ******************************************************************
@@ -130,7 +130,6 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 	if (hash->tabla_h == NULL){
 		free(hash);
 	}
-
 	return hash;
 }
 
@@ -146,6 +145,32 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 	}
 	hash->cantidad++;
 	return true;
-
 }
 
+void *hash_obtener(const hash_t *hash, const char *clave){
+	size_t posicion = hashing(clave,hash->capacidad);
+	lista_t* balde = hash->tabla_h[posicion];
+	if (balde == NULL){
+		return NULL;
+	}
+	nodo_t* registro = balde->prim;
+	while (registro){
+		campo_t* campo = (campo_t*)registro->valor_nodo;
+		if (strcmp(campo->clave,clave) == 0){
+			return campo->valor;
+		}
+		registro = registro->prox;
+	}
+	return NULL;
+}
+
+bool hash_pertenece(const hash_t *hash, const char *clave){
+	return hash_obtener(hash,clave) != NULL;
+}
+
+size_t hash_cantidad(const hash_t *hash){
+	return hash->cantidad;
+}
+
+void *hash_borrar(hash_t *hash, const char *clave){
+}
