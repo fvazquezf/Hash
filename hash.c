@@ -2,6 +2,7 @@
 #include "lista.h"
 #include <stdlib.h>
 
+
 #define FACTOR_DE_CARGA 1
 #define MULTIPLICADOR_TABLA_CAPACIDAD 2
 #define TABLA_CAPACIDAD_INICIAL 16
@@ -22,6 +23,7 @@ struct hash{
 	size_t capacidad;
 	size_t cantidad;
 	hash_destruir_dato_t* destruir_dato;
+
 };
 
 /* ******************************************************************
@@ -128,6 +130,7 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 	if (hash->tabla_h == NULL){
 		free(hash);
 	}
+
 	return hash;
 }
 
@@ -145,3 +148,4 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 	return true;
 
 }
+
