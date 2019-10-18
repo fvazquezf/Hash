@@ -28,20 +28,21 @@ struct hash{
 /* ******************************************************************
  *          		      AUXILIARES
  * *****************************************************************/
-
-lista_t** crea_tabla_hash(size_t capacidad){
-	lista_t** tabla_h = malloc(capacidad*sizeof(lista_t));
-	if (tabla_h == NULL){
-		return NULL
-	}
-	rellena_tabla_null(tabla_h);
-	return tabla_h;
-}
 void rellena_tabla_null(lista_t** tabla_h, size_t capacidad){
 	for (int i = 0; i < capacidad; ++i){
 		tabla_h[i] = NULL;
 	}
 }
+
+lista_t** crea_tabla_hash(size_t capacidad){
+	lista_t** tabla_h = malloc(capacidad*sizeof(lista_t*));
+	if (tabla_h == NULL){
+		return NULL;
+	}
+	rellena_tabla_null(tabla_h,capacidad);
+	return tabla_h;
+}
+
 unsigned long hashing(unsigned char *str,size_t capacidad){
 	unsigned long h = 5381;
 	int c;
@@ -87,7 +88,7 @@ bool wrapper_hash_guardar(lista_t** tabla_h,size_t capacidad, const char *clave,
 	}
 
 	//Entra si fallo lista_insertar()
-	if (!lista_insertar_primero(tabla_h[posicion],(void*)campo)){
+	if (lista_insertar_primero(tabla_h[posicion],(void*)campo) == false){
 		borrar_campo(campo);
 		if(lista_esta_vacia(tabla_h[posicion])){
 			lista_destruir(tabla_h[posicion],NULL);
@@ -97,24 +98,43 @@ bool wrapper_hash_guardar(lista_t** tabla_h,size_t capacidad, const char *clave,
 	return true;
 }
 
-bool hash_redimensionar(lista_t** tabla_h,size_t capacidad){
-	lista_t** tabla_nueva = crea_tabla_hash(capacidad);
+
+bool hash_redimensionar(hash_t* hash){
+	size_t nueva_capacidad = hash->capacidad*MULTIPLICADOR_TABLA_CAPACIDAD;
+	lista_t** tabla_vieja = hash->tabla_h;
+	lista_t** tabla_nueva = crea_tabla_hash(nueva_capacidad);
 	if (tabla_nueva == NULL){
 		return false;
 	}
-	for (int i = 0; i < capacidad; ++i){
-		if (tabla_h[i] != NULL){
-			campo_t* campo = lista_borrar_primero(tabla_h[i]);
+	for (int i = 0; i < hash->capacidad; ++i){
+		if (tabla_vieja[i] != NULL){
+			campo_t* campo = lista_borrar_primero(tabla_vieja[i]);
 			while (campo != NULL){
-				//Que hay que hacer si falla la copia?
-				//¿Llamamos a tabla_destruir ?
-				wrapper_hash_guardar(tabla_nueva,capacidad,campo->clave,campo->valor);
+				wrapper_hash_guardar(tabla_nueva,hash->capacidad,campo->clave,campo->valor);
 			}
 		}
 	}
-	tabla_h = tabla_nueva;
+	
+	hash->tabla_h = tabla_nueva;
 	return true;
 }
+
+nodo_t* hash_buscar(const hash_t *hash, const char *clave){
+	size_t posicion = hashing(clave,hash->capacidad);
+	lista_t* balde = hash->tabla_h[posicion];
+	if (balde == NULL){
+		return NULL;
+	}
+	nodo_t* nodo_actual = lista->prim;
+	while(nodo_actual){
+		if(!strcmp((char*)nodo_actual->valor_nodo->clave,clave)){
+			return nodo_actual;
+		}
+		nodo_actual = nodo_actual->prox;	
+	}
+	return NULL;
+}
+
 
 /* ******************************************************************
  *						PRIMITIVAS DE HASH
@@ -135,37 +155,34 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 	if ((hash->cantidad / hash->capacidad) > FACTOR_DE_CARGA){
-		bool redimension = hash_redimensionar(hash->tabla_h,hash->capacidad*MULTIPLICADOR_TABLA_CAPACIDAD);
-		if (!redimension){
+		if (!hash_redimensionar(hash)){
 			return false;
 		}
 	}
-	if (!wrapper_hash_guardar(hash->tabla_h,hash->capacidad,clave,dato)){
-		return false;
+	if (!hash_pertenece(hash,clave)){
+		if (!wrapper_hash_guardar(hash->tabla_h,hash->capacidad,clave,dato)){
+			return false;
+		}	
+	} else{
+		nodo_t* nodo_busqueda = hash_buscar(hash.clave);
+		nodo_busqueda->valor_nodo->valor = dato;
 	}
 	hash->cantidad++;
 	return true;
 }
 
 void *hash_obtener(const hash_t *hash, const char *clave){
-	size_t posicion = hashing(clave,hash->capacidad);
-	lista_t* balde = hash->tabla_h[posicion];
-	if (balde == NULL){
+	nodo_t* nodo_busqueda = hash_buscar(hash,clave);
+	if(nodo_busqueda == NULL){
 		return NULL;
 	}
-	nodo_t* registro = balde->prim;
-	while (registro){
-		campo_t* campo = (campo_t*)registro->valor_nodo;
-		if (strcmp(campo->clave,clave) == 0){
-			return campo->valor;
-		}
-		registro = registro->prox;
-	}
-	return NULL;
+	return (char*)nodo_busqueda->valor_nodo_busqueda->valor;
+
 }
 
 bool hash_pertenece(const hash_t *hash, const char *clave){
-	return hash_obtener(hash,clave) != NULL;
+	nodo_t* nodo_busqueda = hash_buscar(hash,clave);
+	return nodo_busqueda != NULL;
 }
 
 size_t hash_cantidad(const hash_t *hash){
@@ -173,4 +190,34 @@ size_t hash_cantidad(const hash_t *hash){
 }
 
 void *hash_borrar(hash_t *hash, const char *clave){
+	size_t posicion = hashing(clave,hash->capacidad);
+	lista_t* balde = hash->tabla_h[posicion];
+	if (balde == NULL){
+		return NULL;
+	}
+	lista_iter_t* iter = lista_iter_crear(balde);
+	while (!lista_iter_al_final(iter)){
+		campo_t* campo = (campo_t*)lista_iter_ver_actual(iter);
+		if (!strcmp(clave,campo->clave)){
+			void* aux = campo->clave;
+			borrar_campo(campo);
+			lista_iter_borrar(lista_iter_t *iter);
+			return campo;
+		}
+		lista_iter_avanzar(iter);	
+	}
+	lista_iter_destruir(iter);
+	return NULL;
+}
+
+void hash_destruir(hash_t *hash){
+	lista_t** tabla_h = hash->tabla_h;
+	for (int i = 0; i < hash->capacidad; ++i){
+		if (tabla_h[i] != NULL){
+			campo_t* campo = lista_borrar_primero(tabla_h[i]);
+			destruir_dato(campo->dato);
+			borrar_campo(campo);
+	}
+	free(tabla_h);
+	free(hash);
 }
