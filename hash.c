@@ -9,7 +9,6 @@
 #define FACTOR_DE_CARGA 1
 #define MULTIPLICADOR_TABLA_CAPACIDAD 2
 #define TABLA_CAPACIDAD_INICIAL 16
-#define TABLA_CANTIDAD_INICIAL 0
 
 /* ******************************************************************
  *                DEFINICION DE LOS TIPOS DE DATOS
@@ -58,10 +57,10 @@ lista_t** crea_tabla_hash(size_t capacidad){
 
 size_t hashing(const char *str,size_t capacidad_tabla){
 	size_t h = 5381;
-	int c = 0;
-	while (c == *str++){
-		h = ((h << 5) + h) + c;
+	while (*str){
+		h = ((h * 10) + *str++) - '0' ;
 	}
+	
 	return h%capacidad_tabla;
 }
 
@@ -91,8 +90,6 @@ bool wrapper_hash_guardar(lista_t** tabla_h,size_t capacidad, const char *clave,
 		return false;
 	}
 	size_t posicion = hashing(campo->clave,capacidad);
-	//Entra si fallo lista_insertar()
-	//no se si hace falta castear a void* porque lo hace automaticamente c eso
 	if (lista_insertar_primero(tabla_h[posicion],(void*)campo) == false){
 		borrar_campo(campo);
 		return false;
@@ -105,10 +102,10 @@ bool hash_redimensionar(lista_t** tabla_h,size_t capacidad){
 	if (tabla_nueva == NULL){
 		return false;
 	}
-	//bool auxiliar = true;
+	campo_t* campo;
 	for (int i = 0; i < (capacidad/MULTIPLICADOR_TABLA_CAPACIDAD); ++i){
 		while(lista_esta_vacia(tabla_h[i]) == false){
-			campo_t* campo = lista_borrar_primero(tabla_h[i]);
+			campo = lista_borrar_primero(tabla_h[i]);
 			wrapper_hash_guardar(tabla_nueva,capacidad,campo->clave,campo->valor);
 			borrar_campo(campo);
 		}
@@ -146,6 +143,12 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 		}
 		hash->capacidad = hash->capacidad * MULTIPLICADOR_TABLA_CAPACIDAD;
 	}
+	if(hash_pertenece(hash, clave)){
+		void* dato = hash_borrar(hash, clave);
+		if(hash->destruir_dato != NULL){
+			hash->destruir_dato(dato);
+		}
+	}
 	if (!wrapper_hash_guardar(hash->tabla_h,hash->capacidad,clave,dato)){
 		return false;
 	}
@@ -159,8 +162,9 @@ void *hash_borrar(hash_t *hash, const char *clave){
 	}
 	size_t posicion = hashing(clave,hash->capacidad);
 	lista_iter_t* iter = lista_iter_crear(hash->tabla_h[posicion]);
-	campo_t* campoAux = lista_iter_ver_actual(iter);
-	while(lista_iter_al_final(iter) != false){
+	campo_t* campoAux;
+	while(lista_iter_al_final(iter) == false){
+		campoAux = lista_iter_ver_actual(iter);
 		if (strcmp(clave ,campoAux->clave) == 0){
 			campo_t* campo = lista_iter_borrar(iter);
 			void* auxiliar = campo->valor;
@@ -170,7 +174,6 @@ void *hash_borrar(hash_t *hash, const char *clave){
 			return auxiliar;
 		}
 		lista_iter_avanzar(iter);
-		campoAux = lista_iter_ver_actual(iter);
 	}
 	lista_iter_destruir(iter);
 	return NULL;
@@ -182,13 +185,14 @@ void *hash_obtener(const hash_t *hash, const char *clave){
 	}
 	size_t posicion = hashing(clave,hash->capacidad);
 	lista_iter_t* iter = lista_iter_crear(hash->tabla_h[posicion]);
-	campo_t* campoAux = lista_iter_ver_actual(iter);
-	while(lista_iter_al_final(iter) != false){
+	campo_t* campoAux;
+	while(lista_iter_al_final(iter) == false){
+		campoAux = lista_iter_ver_actual(iter);
 		if (strcmp(clave ,campoAux->clave) == 0){
+			lista_iter_destruir(iter);
 			return campoAux->valor;
 		}
 		lista_iter_avanzar(iter);
-		campoAux = lista_iter_ver_actual(iter);
 	}
 	lista_iter_destruir(iter);
 	return NULL;
@@ -200,13 +204,15 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 	}
 	size_t posicion = hashing(clave,hash->capacidad);
 	lista_iter_t* iter = lista_iter_crear(hash->tabla_h[posicion]);
-	campo_t* campoAux = lista_iter_ver_actual(iter);
-	while(lista_iter_al_final(iter) != false){
+	campo_t* campoAux;
+	while(lista_iter_al_final(iter) == false){
+		campoAux = lista_iter_ver_actual(iter);
 		if (strcmp(clave ,campoAux->clave) == 0){
+			lista_iter_destruir(iter);
 			return true;
 		}
 		lista_iter_avanzar(iter);
-		campoAux = lista_iter_ver_actual(iter);
+		
 	}
 	lista_iter_destruir(iter);
 	return false;
@@ -221,10 +227,13 @@ void hash_destruir(hash_t *hash){
 	for (int i = 0; i < hash->capacidad; ++i){
 		while(lista_esta_vacia(hash->tabla_h[i]) == false){
 			campo = lista_borrar_primero(hash->tabla_h[i]);
-			hash->destruir_dato(campo->valor);
+			if (hash->destruir_dato != NULL){
+				hash->destruir_dato(campo->valor);
+			}
 			borrar_campo(campo);
 		}
 		lista_destruir(hash->tabla_h[i], NULL);
 	}
+	free(hash->tabla_h);
 	free(hash);
 }
