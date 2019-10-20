@@ -28,6 +28,13 @@ struct hash{
 
 };
 
+struct hash_iter {
+	size_t cantidad_actual;
+	const hash_t* hash;
+	lista_iter_t* iter_lista;
+	size_t posicion_iter;
+};
+
 /* ******************************************************************
  *          		      AUXILIARES
  * *****************************************************************/
@@ -236,4 +243,62 @@ void hash_destruir(hash_t *hash){
 	}
 	free(hash->tabla_h);
 	free(hash);
+}
+
+/* ******************************************************************
+ *						ITERADOR DE HASH
+ * *****************************************************************/
+ 
+hash_iter_t *hash_iter_crear(const hash_t *hash){
+	hash_iter_t* hash_iter = malloc(sizeof(hash_iter_t));
+	hash_iter->cantidad_actual = 0;
+	hash_iter->hash = hash;
+	int posicionLista = 0;
+	lista_iter_t* auxiliar = lista_iter_crear(hash->tabla_h[posicionLista]);
+	if(hash->cantidad != 0){
+		while(lista_iter_al_final(auxiliar)){
+			lista_iter_destruir(auxiliar);
+			posicionLista++;
+			auxiliar = lista_iter_crear(hash->tabla_h[posicionLista]);
+		}
+	} 
+	hash_iter->iter_lista = auxiliar;
+	hash_iter->posicion_iter = posicionLista;
+	return hash_iter;
+}
+
+bool hash_iter_avanzar(hash_iter_t *iter){
+	if(hash_iter_al_final(iter)){
+		return false;
+	}
+	if(lista_iter_al_final(iter->iter_lista) == false){
+		if (lista_iter_avanzar(iter->iter_lista));{
+			iter->cantidad_actual ++;
+			return true;
+		}
+		return false;
+	}
+	while(lista_iter_al_final(iter->iter_lista)){
+		lista_iter_destruir(iter->iter_lista);
+		iter->posicion_iter ++;
+		iter->iter_lista = lista_iter_crear(iter->hash->tabla_h[iter->posicion_iter]);
+	}
+	return true;
+}
+
+const char *hash_iter_ver_actual(const hash_iter_t *iter){
+	if(hash_iter_al_final(iter)){
+		return NULL;
+	}
+	campo_t* campo = lista_iter_ver_actual(iter->iter_lista);
+	return campo->clave;
+}
+
+bool hash_iter_al_final(const hash_iter_t *iter){
+	return iter->cantidad_actual == iter->hash->cantidad;
+}
+
+void hash_iter_destruir(hash_iter_t* iter){
+	lista_iter_destruir(iter->iter_lista);
+	free(iter);
 }

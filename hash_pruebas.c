@@ -17,7 +17,7 @@
 /* ******************************************************************
  *                        PRUEBAS UNITARIAS
  * *****************************************************************/
-/*
+
 static void prueba_crear_hash_vacio()
 {
     hash_t* hash = hash_crear(NULL);
@@ -211,7 +211,7 @@ static void prueba_hash_valor_null()
 
     hash_destruir(hash);
 }
-*/
+/*
 static void prueba_hash_volumen(size_t largo, bool debug)
 {
     hash_t* hash = hash_crear(NULL);
@@ -271,7 +271,7 @@ static void prueba_hash_volumen(size_t largo, bool debug)
     hash_destruir(hash);
 
 }
-/*
+*/
 static ssize_t buscar(const char* clave, char* claves[], size_t largo)
 {
     for (size_t i = 0; i < largo; i++) {
@@ -331,7 +331,7 @@ static void prueba_hash_iterar()
     hash_iter_destruir(iter);
     hash_destruir(hash);
 }
-
+/*
 static void prueba_hash_iterar_volumen(size_t largo)
 {
     hash_t* hash = hash_crear(NULL);
@@ -403,16 +403,16 @@ static void prueba_hash_iterar_volumen(size_t largo)
 void pruebas_hash_catedra()
 {
     /* Ejecuta todas las pruebas unitarias. */
-    //prueba_crear_hash_vacio();
-    //prueba_iterar_hash_vacio();
-    //prueba_hash_insertar();
-    //prueba_hash_reemplazar();
-    //prueba_hash_reemplazar_con_destruir();
-    //prueba_hash_borrar();
-    //prueba_hash_clave_vacia();
-    //prueba_hash_valor_null();
-    prueba_hash_volumen(5000, true);
-    //prueba_hash_iterar();
+    prueba_crear_hash_vacio();
+    prueba_iterar_hash_vacio();
+    prueba_hash_insertar();
+    prueba_hash_reemplazar();
+    prueba_hash_reemplazar_con_destruir();
+    prueba_hash_borrar();
+    prueba_hash_clave_vacia();
+    prueba_hash_valor_null();
+    //prueba_hash_volumen(5000, true);
+    prueba_hash_iterar();
     //prueba_hash_iterar_volumen(5000);
 }
 

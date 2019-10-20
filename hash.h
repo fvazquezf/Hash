@@ -59,7 +59,7 @@ void hash_destruir(hash_t *hash);
 /* ******************************************************************
  *                    PRIMITIVAS DE ITERADOR HASH
  * *****************************************************************/
-/*
+
 // Dada una tabla de hash, se crea un iterador del mismo
 // Pre: el hash esta creado
 // Post: devuelve un iterador de hash
@@ -83,6 +83,6 @@ bool hash_iter_al_final(const hash_iter_t *iter);
 // Pre: el iterador de hash esta creado
 // Post: el iterador de hash se destruyo
 void hash_iter_destruir(hash_iter_t* iter);
-*/
+
 #endif // HASH_H
 
