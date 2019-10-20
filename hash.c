@@ -104,22 +104,22 @@ bool wrapper_hash_guardar(lista_t** tabla_h,size_t capacidad, const char *clave,
 	return true;
 }
 
-bool hash_redimensionar(lista_t** tabla_h,size_t capacidad){
-	lista_t** tabla_nueva = crea_tabla_hash(capacidad);
+bool hash_redimensionar(hash_t* hash,size_t n_capacidad){
+	lista_t** tabla_nueva = crea_tabla_hash(n_capacidad);
 	if (tabla_nueva == NULL){
 		return false;
 	}
-	campo_t* campo;
-	for (int i = 0; i < (capacidad/MULTIPLICADOR_TABLA_CAPACIDAD); ++i){
+	lista_t** tabla_h = hash->tabla_h;
+	for (int i = 0; i < hash->capacidad; ++i){
 		while(lista_esta_vacia(tabla_h[i]) == false){
-			campo = lista_borrar_primero(tabla_h[i]);
-			wrapper_hash_guardar(tabla_nueva,capacidad,campo->clave,campo->valor);
+			campo_t* campo = lista_borrar_primero(tabla_h[i]);
+			wrapper_hash_guardar(tabla_nueva,n_capacidad,campo->clave,campo->valor);
 			borrar_campo(campo);
 		}
 		lista_destruir(tabla_h[i], NULL);
 	}
 	free(tabla_h);
-	tabla_h = tabla_nueva;
+	hash->tabla_h = tabla_nueva;
 	return true;
 }
 
@@ -144,7 +144,7 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 	if ((hash->cantidad / hash->capacidad) > FACTOR_DE_CARGA){
-		bool redimension = hash_redimensionar(hash->tabla_h,hash->capacidad*MULTIPLICADOR_TABLA_CAPACIDAD);
+		bool redimension = hash_redimensionar(hash,hash->capacidad*MULTIPLICADOR_TABLA_CAPACIDAD);
 		if (!redimension){
 			return false;
 		}
@@ -271,11 +271,9 @@ bool hash_iter_avanzar(hash_iter_t *iter){
 	if(hash_iter_al_final(iter)){
 		return false;
 	}
-	if(lista_iter_al_final(iter->iter_lista) == false){
-		if (lista_iter_avanzar(iter->iter_lista));{
-			iter->cantidad_actual ++;
-			return true;
-		}
+	lista_iter_avanzar(iter->iter_lista);
+	iter->cantidad_actual ++;
+	if(hash_iter_al_final(iter)){
 		return false;
 	}
 	while(lista_iter_al_final(iter->iter_lista)){
