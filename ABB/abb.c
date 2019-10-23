@@ -25,59 +25,59 @@ void (*abb_destruir_dato_t) (void *);
 struct abb_iter abb_iter_t;
 
 /* ******************************************************************
- *                PRIMITIVAS DE ABB
+ *          		      AUXILIARES
  * *****************************************************************/
- 
-abb_t* abb_crear(abb_comparar_clave_t cmp, abb_destruir_dato_t destruir_dato){
-	abb_t* abb = malloc(sizeof(abb_t));
-	if (abb == NULL){
-		return NULL;
-	}
-	abb->raiz = NULL;
-	abb->comparar = cmp;
-	abb->destruir = destruir_dato;
-	abb->cantidad = 0;
-	return abb;
-}
+
 nodo_t* crearNodo(const char* clave, void* dato){
 	nodo_t* nodo = malloc(sizeof(nodo_t));
 	if (nodo == NULL){
 		return NULL;
 	}
+	char* copia_clave = strdup(clave);
+	if (copia_clave == NULL){
+		free(nodo);
+		return NULL;
+	}
 	nodo->izq = NULL;
 	nodo->der = NULL;
 	nodo->dato = dato;
-	nodo->clave = clave
+	nodo->clave = copia_clave;
 	return nodo;
 }
 
+nodo_t* buscar(nodo_t* raiz,const char *clave,abb_comparar_clave_t comparar){
+	if (raiz == NULL){
+		return NULL;
+	}
+	if (comparar(clave,raiz->clave)<0){
+		return buscar(raiz->izq,clave,comparar);
+	}
+	else if (comparar(clave,raiz->clave)>0){
+		return abb_guardar(raiz->der,clave,comparar);
+	} else {
+		return raiz;
+	}
 
+}
 bool guardar(nodo_t* raiz, abb_t* arbol, const char *clave, void *dato){
 	if(raiz == NULL){
 		raiz = crearNodo(clave, dato);
 		if (raiz == NULL){
 			return false;
 		}
-		arbol->cantidad ++;
-		return true;
 	}
-	if(arbol->comparar(raiz->clave, clave) == 0){
+	else if (arbol->comparar(clave,raiz->clave)<0){
+		return abb_guardar(raiz->izq,arbol,clave,dato);
+	}
+	else if (arbol->comparar(clave,raiz->clave)>0){
+		return abb_guardar(raiz->der,arbol,clave,dato);
+	} else {
 		arbol->destruir(raiz->dato);
 		raiz->dato == dato;
-		arbol->cantidad ++;
-		return true;
 	}
-	if(arbol->comparar(clave, raiz->der->clave) < 0){
-		// revisar comparaaciones, no estoy seguro si lo arme bien o al reves
-			return abb_guardar(raiz->izq, clave, dato);
-	}
-	return abb_guardar(raiz->der, arbol, clave, dato);
-}
-
-bool abb_guardar(abb_t *arbol, const char *clave, void *dato){
-	return guardar(arbol->raiz, arbol, clave, dato);
-	
-}
+	arbol->cantidad ++;
+	return true;
+}	
 
 void* borrar_menos_1_hijo(nodo_t* raiz){
 		nodo_t* n_auxiliar = raiz;
@@ -122,7 +122,45 @@ void* borrar(nodo_t* raiz, abb_t* arbol, const char *clave){
 	return abb_borrar(raiz->der, arbol, clave, dato);
 }
 
+
+/* ******************************************************************
+ *                PRIMITIVAS DE ABB
+ * *****************************************************************/
+ 
+abb_t* abb_crear(abb_comparar_clave_t cmp, abb_destruir_dato_t destruir_dato){
+	abb_t* abb = malloc(sizeof(abb_t));
+	if (abb == NULL){
+		return NULL;
+	}
+	abb->raiz = NULL;
+	abb->comparar = cmp;
+	abb->destruir = destruir_dato;
+	abb->cantidad = 0;
+	return abb;
+}
+
+
+bool abb_guardar(abb_t *arbol, const char *clave, void *dato){
+	return guardar(arbol->raiz, arbol, clave, dato);
+	
+}
+
 void *abb_borrar(abb_t *arbol, const char *clave){
 	return borrar(arbol->raiz, arbol, clave);
 }
 
+void *abb_obtener(const abb_t *arbol, const char *clave){
+	nodo_t* nodo_busqueda = buscar(arbol->raiz,clave,arbol->comparar);
+	if (nodo_busqueda == NULL){
+		return NULL;
+	}
+	return nodo_busqueda->dato;
+}
+
+bool abb_pertenece(const abb_t *arbol, const char *clave){
+	nodo_t* nodo_busqueda = buscar(arbol->raiz,clave,arbol->comparar);
+	if (nodo_busqueda == NULL){
+		return false;
+	}
+	return true;
+}
