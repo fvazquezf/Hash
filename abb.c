@@ -45,8 +45,7 @@ nodo_t* crearNodo(const char* clave, void* dato){
 	return nodo;
 }
 
-void destruir_nodos_post(nodo_t* raiz,abb_destruir_dato_t destruir)
-{
+void destruir_nodos_post(nodo_t* raiz,abb_destruir_dato_t destruir){
 	if (raiz == NULL){
 		return;
 	}
