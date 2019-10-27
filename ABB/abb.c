@@ -1,15 +1,16 @@
-#define _POSIX_C_SOURCE 200809L // strdup()
-#include "abb.h"
 #include <stdlib.h>
+#include "abb.h"
+#include "pila.h"
 
 /* ******************************************************************
  *                DEFINICION DE LOS TIPOS DE DATOS
  * *****************************************************************/
+char *strdup(const char *s);
+
 typedef struct nodo{
-	struct nodo_t* izq;
-	struct nodo_t* der;
+	struct nodo *izq, *der;
 	void* dato;
-	const char* clave;
+	char* clave;
 } nodo_t;
 
 struct abb{
@@ -19,10 +20,13 @@ struct abb{
 	size_t cantidad;
 };
 
-int (*abb_comparar_clave_t) (const char *, const char *);
-void (*abb_destruir_dato_t) (void *);
-struct abb_iter abb_iter_t;
-typedef void (*destruir_nodo) (nodo_t*, abb_destruir_dato_t);
+struct abb_iter{
+	const abb_t* arbol;
+	pila_t* pila;
+};
+
+typedef void (*destruir_n)(nodo_t*, abb_destruir_dato_t);
+typedef bool (*visitar_t)(const char *, void *, void *);
 
 /* ******************************************************************
  *          		      AUXILIARES
@@ -45,8 +49,15 @@ nodo_t* crearNodo(const char* clave, void* dato){
 	return nodo;
 }
 
-void destruir_nodos_post(nodo_t* raiz,abb_destruir_dato_t destruir)
-{
+void destruir_nodo(nodo_t* nodo_abb, abb_destruir_dato_t destruir){
+	if (destruir != NULL){
+		destruir(nodo_abb->dato);
+	}
+	free(nodo_abb->clave);
+	free(nodo_abb);
+}
+
+void destruir_nodos_post(nodo_t* raiz,abb_destruir_dato_t destruir){
 	if (raiz == NULL){
 		return;
 	}
@@ -64,22 +75,14 @@ nodo_t** buscar(nodo_t** dir_raiz,const char *clave,abb_comparar_clave_t compara
 		return buscar(&(raiz->izq),clave,comparar);
 	}
 	else if (comparar(clave,raiz->clave)>0){
-		return abb_guardar(&(raiz->der),clave,comparar);
+		return buscar(&(raiz->der),clave,comparar);
 	} else {
 		return dir_raiz;
 	}
 
 }
 
-void destruir_nodo(nodo_t* nodo_abb, abb_destruir_dato_t destruir){
-	if (destruir != NULL){
-		destruir(nodo_abb->dato);
-	}
-	free(nodo_abb->clave);
-	free(nodo_abb);
-}
-
-void* borrar_nodo(nodo_t** dir_nodo_busqueda, destruir_nodo destruir_nodo){
+void borrar(nodo_t** dir_nodo_busqueda, destruir_n destruir_nodo){
 	nodo_t* nodo_busqueda = (nodo_t*) dir_nodo_busqueda;
 	nodo_t* reemplazante;
 	if(nodo_busqueda->izq != NULL && nodo_busqueda->der == NULL){ //Solo tiene hijo izq
@@ -94,13 +97,13 @@ void* borrar_nodo(nodo_t** dir_nodo_busqueda, destruir_nodo destruir_nodo){
 	else { //Tiene dos hijos, busco reemplazante
 		reemplazante = nodo_busqueda->der;
 		if (reemplazante->izq == NULL){ // el reemplazante no tiene hijo izquierdo, llamo recursivamente para borrar el derecho
-			borrar_nodo(&(nodo_busqueda->der),NULL);
+			borrar(&(nodo_busqueda->der),NULL);
 		} else { //Busco al menor yendo todo izquierda
 			while (reemplazante->izq->izq != NULL){
 				reemplazante = reemplazante->izq;
 			}	
 			nodo_t* aux = reemplazante->izq;
-			borrar_nodo(&(reemplazante->izq),NULL);
+			borrar(&(reemplazante->izq),NULL);
 			reemplazante = aux;
 		}
 		//Al reemplazante, le asigno los hijos del que quiero borrar
@@ -111,7 +114,7 @@ void* borrar_nodo(nodo_t** dir_nodo_busqueda, destruir_nodo destruir_nodo){
 		destruir_nodo(nodo_busqueda,NULL);
 	}
 	//swap entre reemplazante y el que quiero borrar
-	(nodo_t*)dir_nodo_busqueda = reemplazante;
+	*dir_nodo_busqueda = (nodo_t*)reemplazante;
 }
 
 
@@ -164,7 +167,8 @@ void *abb_borrar(abb_t *arbol, const char *clave){
 }
 
 void *abb_obtener(const abb_t *arbol, const char *clave){
-	nodo_t** dir_nodo_busqueda = buscar(&(arbol->raiz),clave,arbol->comparar);
+	nodo_t* raiz = arbol->raiz;
+	nodo_t** dir_nodo_busqueda = buscar(&(raiz),clave,arbol->comparar);
 	nodo_t* nodo_busqueda = (nodo_t*) dir_nodo_busqueda;
 	if (nodo_busqueda == NULL){
 		return NULL;
@@ -173,7 +177,8 @@ void *abb_obtener(const abb_t *arbol, const char *clave){
 }
 
 bool abb_pertenece(const abb_t *arbol, const char *clave){
-	nodo_t** dir_nodo_busqueda = buscar(&(arbol->raiz),clave,arbol->comparar);
+	nodo_t* raiz = arbol->raiz;
+	nodo_t** dir_nodo_busqueda = buscar(&(raiz),clave,arbol->comparar);
 	nodo_t* nodo_busqueda = (nodo_t*) dir_nodo_busqueda;
 	return nodo_busqueda != NULL;
 }
@@ -183,6 +188,90 @@ size_t abb_cantidad(abb_t *arbol){
 }
 
 void abb_destruir(abb_t *arbol){
-	destruir_nodos_post(arbol->raiz, arbol->destruir);
+	destruir_nodos_post(arbol->raiz,arbol->destruir);
 	free(arbol);
 }
+
+/* ******************************************************************
+ *          	      AUXILIARES DE ABB ITERADOR
+ * *****************************************************************/
+
+bool apilar_todo_izquierda(pila_t* pila, nodo_t* raiz){
+	while (raiz != NULL){
+		if (pila_apilar(pila,raiz) == false){
+			return false;
+		}
+		raiz = raiz->izq;
+	}
+	return true;
+}
+
+bool iterar_in_order(nodo_t* raiz,visitar_t visitar, void* extra){
+	if (raiz == NULL){
+		return true;	
+	} 
+	if (!iterar_in_order(raiz->izq,visitar,extra)){
+		return false;
+	}
+	if (!visitar(raiz->clave,raiz->dato,extra)){
+		return false;
+	}
+	return iterar_in_order(raiz->der,visitar, extra);
+}
+
+/* ******************************************************************
+ *                PRIMITIVAS DE ABB ITERADOR INTERNO
+ * *****************************************************************/
+
+void abb_in_order(abb_t *arbol, bool visitar(const char *, void *, void *), void *extra){
+	iterar_in_order(arbol->raiz,visitar,extra);
+}
+
+/* ******************************************************************
+ *                PRIMITIVAS DE ABB ITERADOR EXTERNO
+ * *****************************************************************/
+
+abb_iter_t *abb_iter_in_crear(const abb_t *arbol){
+	abb_iter_t* iter = malloc(sizeof(abb_iter_t));
+	if (iter == NULL){
+		return NULL;	
+	} 
+	pila_t* pila = pila_crear();
+	if (pila == NULL){
+		free(iter);
+		return NULL;
+	}
+	if (apilar_todo_izquierda(pila,arbol->raiz) == false){
+		pila_destruir(pila);
+		free(iter);
+		return NULL;
+	}
+	iter->arbol = arbol;
+	iter->pila = pila;
+	return iter;
+}
+
+bool abb_iter_in_avanzar(abb_iter_t *iter){
+	if (abb_iter_in_al_final(iter)){
+		return false;
+	}
+	nodo_t* nodo_actual = pila_desapilar(iter->pila);
+	return apilar_todo_izquierda(iter->pila,nodo_actual->der);
+}
+const char *abb_iter_in_ver_actual(const abb_iter_t *iter){
+	if (abb_iter_in_al_final(iter)){
+		return NULL;
+	}
+	nodo_t* nodo_actual = pila_ver_tope(iter->pila);
+	return nodo_actual->clave;
+}
+bool abb_iter_in_al_final(const abb_iter_t *iter){
+	return pila_esta_vacia(iter->pila);
+}
+
+void abb_iter_in_destruir(abb_iter_t* iter){
+	pila_destruir(iter->pila);
+	free(iter);
+}
+
+
