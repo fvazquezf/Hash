@@ -407,9 +407,9 @@ void pruebas_abb_alumno()
     prueba_abb_borrar();
     prueba_abb_clave_vacia();
     prueba_abb_valor_null();
-    prueba_abb_volumen(5000, true);
+    prueba_abb_volumen(1, true);
     prueba_abb_iterar();
-    prueba_abb_iterar_volumen(5000);
+    prueba_abb_iterar_volumen(1);
 }
 
 /*void pruebas_volumen_catedra(size_t largo)

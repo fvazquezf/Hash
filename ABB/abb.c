@@ -1,12 +1,12 @@
+#define _POSIX_C_SOURCE 200809L // strdup()
 #include <stdlib.h>
+#include <string.h>
 #include "abb.h"
 #include "pila.h"
 
 /* ******************************************************************
  *                DEFINICION DE LOS TIPOS DE DATOS
  * *****************************************************************/
-char *strdup(const char *s);
-
 typedef struct nodo{
 	struct nodo *izq, *der;
 	void* dato;
@@ -67,23 +67,20 @@ void destruir_nodos_post(nodo_t* raiz,abb_destruir_dato_t destruir){
 }
 
 nodo_t** buscar(nodo_t** dir_raiz,const char *clave,abb_comparar_clave_t comparar){
-	nodo_t* raiz = (nodo_t*) dir_raiz;
-	if (raiz == NULL){
-		return NULL;
-	}
-	if (comparar(clave,raiz->clave)<0){
-		return buscar(&(raiz->izq),clave,comparar);
-	}
-	else if (comparar(clave,raiz->clave)>0){
-		return buscar(&(raiz->der),clave,comparar);
-	} else {
+	nodo_t* raiz = *dir_raiz;
+	if (raiz == NULL || comparar(clave,raiz->clave) == 0){
 		return dir_raiz;
+	}
+	else if (comparar(clave,raiz->clave)<0){
+		return buscar(&(raiz->izq),clave,comparar);
+	} else {
+		return buscar(&(raiz->der),clave,comparar);
 	}
 
 }
 
 void borrar(nodo_t** dir_nodo_busqueda, destruir_n destruir_nodo){
-	nodo_t* nodo_busqueda = (nodo_t*) dir_nodo_busqueda;
+	nodo_t* nodo_busqueda = * dir_nodo_busqueda;
 	nodo_t* reemplazante;
 	if(nodo_busqueda->izq != NULL && nodo_busqueda->der == NULL){ //Solo tiene hijo izq
 		reemplazante = nodo_busqueda->izq;
@@ -114,7 +111,7 @@ void borrar(nodo_t** dir_nodo_busqueda, destruir_n destruir_nodo){
 		destruir_nodo(nodo_busqueda,NULL);
 	}
 	//swap entre reemplazante y el que quiero borrar
-	*dir_nodo_busqueda = (nodo_t*)reemplazante;
+	*dir_nodo_busqueda = reemplazante;
 }
 
 
@@ -137,31 +134,31 @@ abb_t* abb_crear(abb_comparar_clave_t cmp, abb_destruir_dato_t destruir_dato){
 
 bool abb_guardar(abb_t *arbol, const char *clave, void *dato){
 	nodo_t** dir_nodo_busqueda = buscar(&(arbol->raiz),clave,arbol->comparar);
-	nodo_t* nodo_busqueda = (nodo_t*) dir_nodo_busqueda;
-	if (nodo_busqueda == NULL){
+	nodo_t* nodo_busqueda = *dir_nodo_busqueda;
+	if (nodo_busqueda == NULL){ //El se encontro el valor con esa clave
 		nodo_busqueda = crearNodo(clave,dato);
 		if (nodo_busqueda == NULL){
 			return false;
 		}
 		*dir_nodo_busqueda = nodo_busqueda;
-	} else {
+		arbol->cantidad++;
+	} else { //Se encontro y se reemplaza
 		if (arbol->destruir != NULL){
 			arbol->destruir(nodo_busqueda->dato);
 		}
 		nodo_busqueda->dato = dato;
 	}
-	arbol->cantidad++;
 	return true;
 }
 
 void *abb_borrar(abb_t *arbol, const char *clave){
 	nodo_t** dir_nodo_busqueda = buscar(&(arbol->raiz),clave,arbol->comparar);
-	nodo_t* nodo_busqueda = (nodo_t*) dir_nodo_busqueda;
+	nodo_t* nodo_busqueda = * dir_nodo_busqueda;
 	if (nodo_busqueda == NULL){
 		return NULL;
 	}
 	void* auxiliar = nodo_busqueda->dato;
-	borrar(dir_nodo_busqueda,destruir_nodo);
+	borrar(dir_nodo_busqueda,destruir_nodo); // llamo a borrar recursivamente
 	arbol->cantidad--;
 	return auxiliar;
 }
@@ -169,7 +166,7 @@ void *abb_borrar(abb_t *arbol, const char *clave){
 void *abb_obtener(const abb_t *arbol, const char *clave){
 	nodo_t* raiz = arbol->raiz;
 	nodo_t** dir_nodo_busqueda = buscar(&(raiz),clave,arbol->comparar);
-	nodo_t* nodo_busqueda = (nodo_t*) dir_nodo_busqueda;
+	nodo_t* nodo_busqueda = * dir_nodo_busqueda;
 	if (nodo_busqueda == NULL){
 		return NULL;
 	}
@@ -179,7 +176,7 @@ void *abb_obtener(const abb_t *arbol, const char *clave){
 bool abb_pertenece(const abb_t *arbol, const char *clave){
 	nodo_t* raiz = arbol->raiz;
 	nodo_t** dir_nodo_busqueda = buscar(&(raiz),clave,arbol->comparar);
-	nodo_t* nodo_busqueda = (nodo_t*) dir_nodo_busqueda;
+	nodo_t* nodo_busqueda = * dir_nodo_busqueda;
 	return nodo_busqueda != NULL;
 }
 
@@ -210,10 +207,10 @@ bool iterar_in_order(nodo_t* raiz,visitar_t visitar, void* extra){
 	if (raiz == NULL){
 		return true;	
 	} 
-	if (!iterar_in_order(raiz->izq,visitar,extra)){
+	if (iterar_in_order(raiz->izq,visitar,extra) == false){
 		return false;
 	}
-	if (!visitar(raiz->clave,raiz->dato,extra)){
+	if (visitar(raiz->clave,raiz->dato,extra) == false){
 		return false;
 	}
 	return iterar_in_order(raiz->der,visitar, extra);
