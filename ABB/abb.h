@@ -1,3 +1,5 @@
+#ifndef ABB_H
+#define ABB_H
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -89,3 +91,5 @@ bool abb_iter_in_al_final(const abb_iter_t *iter);
 // Pre: el iterador de abb esta creado
 // Post: el iterador de abb se destruyo
 void abb_iter_in_destruir(abb_iter_t* iter);
+
+#endif // ABB_H
