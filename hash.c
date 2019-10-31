@@ -4,10 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-
 #define FACTOR_DE_CARGA 1
 #define MULTIPLICADOR_TABLA_CAPACIDAD 2
+#define DIVISOR_MINIMO_ACHICAR 4
 #define TABLA_CAPACIDAD_INICIAL 16
 
 /* ******************************************************************
@@ -45,7 +44,7 @@ lista_t** crea_tabla_hash(size_t capacidad){
 		return NULL;
 	}
 	size_t auxiliar = 0;
-	for (int i = 0; i < capacidad; ++i){
+	for (size_t i = 0; i < capacidad; ++i){
 		tabla_h[i] = lista_crear();
 		if(tabla_h[i] == NULL){
 			auxiliar = i;
@@ -123,6 +122,36 @@ bool hash_redimensionar(hash_t* hash,size_t n_capacidad){
 	return true;
 }
 
+void proxima_posicion_valida_iter(lista_t** tabla,size_t* posicion,lista_iter_t** iter_lista){
+	while(lista_iter_al_final(*iter_lista)){
+		lista_iter_destruir(*iter_lista);
+		*posicion = *posicion + 1;
+		*iter_lista = lista_iter_crear(tabla[*posicion]);
+	}	
+} 
+
+void* devuelve_valor(lista_iter_t* iter,const char *clave,bool borrar_devolver,size_t* int_cantidad){
+	while(lista_iter_al_final(iter) == false){
+		campo_t* campoAux = lista_iter_ver_actual(iter);
+		if (strcmp(clave ,campoAux->clave) == 0){
+			if (borrar_devolver){
+				campo_t* campo = lista_iter_borrar(iter);
+				void* auxiliar = campo->valor;
+				borrar_campo(campo);
+				*int_cantidad = *int_cantidad-1;
+				lista_iter_destruir(iter);
+				return auxiliar;
+			}
+			lista_iter_destruir(iter);
+			return campoAux->valor;
+		}
+		lista_iter_avanzar(iter);
+	}
+	lista_iter_destruir(iter);
+	return NULL;
+}
+
+
 /* ******************************************************************
  *						PRIMITIVAS DE HASH
  * *****************************************************************/
@@ -144,16 +173,15 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 	if ((hash->cantidad / hash->capacidad) > FACTOR_DE_CARGA){
-		bool redimension = hash_redimensionar(hash,hash->capacidad*MULTIPLICADOR_TABLA_CAPACIDAD);
-		if (!redimension){
+		if (!hash_redimensionar(hash,hash->capacidad*MULTIPLICADOR_TABLA_CAPACIDAD)){
 			return false;
 		}
 		hash->capacidad = hash->capacidad * MULTIPLICADOR_TABLA_CAPACIDAD;
 	}
 	if(hash_pertenece(hash, clave)){
-		void* dato = hash_borrar(hash, clave);
+		void* dato_antiguo = hash_borrar(hash, clave);
 		if(hash->destruir_dato != NULL){
-			hash->destruir_dato(dato);
+			hash->destruir_dato(dato_antiguo);
 		}
 	}
 	if (!wrapper_hash_guardar(hash->tabla_h,hash->capacidad,clave,dato)){
@@ -167,23 +195,16 @@ void *hash_borrar(hash_t *hash, const char *clave){
 	if (hash->cantidad == 0){
 		return NULL;
 	}
+	//Redimension tabla
+	if (hash->capacidad > TABLA_CAPACIDAD_INICIAL && hash->cantidad <= hash->capacidad/DIVISOR_MINIMO_ACHICAR){
+		if (!hash_redimensionar(hash,hash->capacidad/MULTIPLICADOR_TABLA_CAPACIDAD)){
+			return false;
+		}
+		hash->capacidad = hash->capacidad / MULTIPLICADOR_TABLA_CAPACIDAD;
+	}
 	size_t posicion = hashing(clave,hash->capacidad);
 	lista_iter_t* iter = lista_iter_crear(hash->tabla_h[posicion]);
-	campo_t* campoAux;
-	while(lista_iter_al_final(iter) == false){
-		campoAux = lista_iter_ver_actual(iter);
-		if (strcmp(clave ,campoAux->clave) == 0){
-			campo_t* campo = lista_iter_borrar(iter);
-			void* auxiliar = campo->valor;
-			borrar_campo(campo);
-			lista_iter_destruir(iter);
-			hash->cantidad --;
-			return auxiliar;
-		}
-		lista_iter_avanzar(iter);
-	}
-	lista_iter_destruir(iter);
-	return NULL;
+	return devuelve_valor(iter,clave,true,&(hash->cantidad));
 }
 
 void *hash_obtener(const hash_t *hash, const char *clave){
@@ -192,17 +213,7 @@ void *hash_obtener(const hash_t *hash, const char *clave){
 	}
 	size_t posicion = hashing(clave,hash->capacidad);
 	lista_iter_t* iter = lista_iter_crear(hash->tabla_h[posicion]);
-	campo_t* campoAux;
-	while(lista_iter_al_final(iter) == false){
-		campoAux = lista_iter_ver_actual(iter);
-		if (strcmp(clave ,campoAux->clave) == 0){
-			lista_iter_destruir(iter);
-			return campoAux->valor;
-		}
-		lista_iter_avanzar(iter);
-	}
-	lista_iter_destruir(iter);
-	return NULL;
+	return devuelve_valor(iter,clave,false,NULL);
 }
 
 bool hash_pertenece(const hash_t *hash, const char *clave){
@@ -248,19 +259,18 @@ void hash_destruir(hash_t *hash){
 /* ******************************************************************
  *						ITERADOR DE HASH
  * *****************************************************************/
- 
+
 hash_iter_t *hash_iter_crear(const hash_t *hash){
 	hash_iter_t* hash_iter = malloc(sizeof(hash_iter_t));
+	if (hash_iter == NULL){
+		return NULL;
+	}
 	hash_iter->cantidad_actual = 0;
 	hash_iter->hash = hash;
-	int posicionLista = 0;
+	size_t posicionLista = 0;
 	lista_iter_t* auxiliar = lista_iter_crear(hash->tabla_h[posicionLista]);
 	if(hash->cantidad != 0){
-		while(lista_iter_al_final(auxiliar)){
-			lista_iter_destruir(auxiliar);
-			posicionLista++;
-			auxiliar = lista_iter_crear(hash->tabla_h[posicionLista]);
-		}
+		proxima_posicion_valida_iter(hash->tabla_h,&posicionLista,&auxiliar);
 	} 
 	hash_iter->iter_lista = auxiliar;
 	hash_iter->posicion_iter = posicionLista;
@@ -276,11 +286,7 @@ bool hash_iter_avanzar(hash_iter_t *iter){
 	if(hash_iter_al_final(iter)){
 		return false;
 	}
-	while(lista_iter_al_final(iter->iter_lista)){
-		lista_iter_destruir(iter->iter_lista);
-		iter->posicion_iter ++;
-		iter->iter_lista = lista_iter_crear(iter->hash->tabla_h[iter->posicion_iter]);
-	}
+	proxima_posicion_valida_iter(iter->hash->tabla_h,&(iter->posicion_iter),&(iter->iter_lista));
 	return true;
 }
 
