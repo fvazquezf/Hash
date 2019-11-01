@@ -21,8 +21,8 @@ struct abb{
 };
 
 struct abb_iter{
+	pila_t* pila_abb;
 	const abb_t* arbol;
-	pila_t* pila;
 };
 
 typedef void (*destruir_n)(nodo_t*, abb_destruir_dato_t);
@@ -79,7 +79,7 @@ nodo_t** buscar(nodo_t** dir_raiz,const char *clave,abb_comparar_clave_t compara
 
 }
 
-void borrar(nodo_t** dir_nodo_busqueda, destruir_n destruir_nodo){
+void borrar(nodo_t** dir_nodo_busqueda, destruir_n fdestruir_nodo){
 	nodo_t* nodo_busqueda = * dir_nodo_busqueda;
 	nodo_t* reemplazante;
 	if(nodo_busqueda->izq != NULL && nodo_busqueda->der == NULL){ //Solo tiene hijo izq
@@ -107,8 +107,8 @@ void borrar(nodo_t** dir_nodo_busqueda, destruir_n destruir_nodo){
 		reemplazante->izq = nodo_busqueda->izq;
 		reemplazante->der = nodo_busqueda->der;
 	}
-	if (destruir_nodo != NULL){
-		destruir_nodo(nodo_busqueda,NULL);
+	if (fdestruir_nodo != NULL){
+		fdestruir_nodo(nodo_busqueda,NULL);
 	}
 	//swap entre reemplazante y el que quiero borrar
 	*dir_nodo_busqueda = reemplazante;
@@ -193,9 +193,9 @@ void abb_destruir(abb_t *arbol){
  *          	      AUXILIARES DE ABB ITERADOR
  * *****************************************************************/
 
-bool apilar_todo_izquierda(pila_t* pila, nodo_t* raiz){
+bool apilar_todo_izquierda(pila_t* pila_abb, nodo_t* raiz){
 	while (raiz != NULL){
-		if (pila_apilar(pila,raiz) == false){
+		if (pila_apilar(pila_abb,raiz) == false){
 			return false;
 		}
 		raiz = raiz->izq;
@@ -213,7 +213,7 @@ bool iterar_in_order(nodo_t* raiz,visitar_t visitar, void* extra){
 	if (visitar(raiz->clave,raiz->dato,extra) == false){
 		return false;
 	}
-	return iterar_in_order(raiz->der,visitar, extra);
+	return iterar_in_order(raiz->der,visitar,extra);
 }
 
 /* ******************************************************************
@@ -233,18 +233,18 @@ abb_iter_t *abb_iter_in_crear(const abb_t *arbol){
 	if (iter == NULL){
 		return NULL;	
 	} 
-	pila_t* pila = pila_crear();
-	if (pila == NULL){
+	pila_t* pila_abb = pila_crear();
+	if (pila_abb == NULL){
 		free(iter);
 		return NULL;
 	}
-	if (apilar_todo_izquierda(pila,arbol->raiz) == false){
-		pila_destruir(pila);
+	if (apilar_todo_izquierda(pila_abb,arbol->raiz) == false){
+		pila_destruir(pila_abb);
 		free(iter);
 		return NULL;
 	}
 	iter->arbol = arbol;
-	iter->pila = pila;
+	iter->pila_abb = pila_abb;
 	return iter;
 }
 
@@ -252,22 +252,22 @@ bool abb_iter_in_avanzar(abb_iter_t *iter){
 	if (abb_iter_in_al_final(iter)){
 		return false;
 	}
-	nodo_t* nodo_actual = pila_desapilar(iter->pila);
-	return apilar_todo_izquierda(iter->pila,nodo_actual->der);
+	nodo_t* nodo_actual = pila_desapilar(iter->pila_abb);
+	return apilar_todo_izquierda(iter->pila_abb,nodo_actual->der);
 }
 const char *abb_iter_in_ver_actual(const abb_iter_t *iter){
 	if (abb_iter_in_al_final(iter)){
 		return NULL;
 	}
-	nodo_t* nodo_actual = pila_ver_tope(iter->pila);
+	nodo_t* nodo_actual = pila_ver_tope(iter->pila_abb);
 	return nodo_actual->clave;
 }
 bool abb_iter_in_al_final(const abb_iter_t *iter){
-	return pila_esta_vacia(iter->pila);
+	return pila_esta_vacia(iter->pila_abb);
 }
 
 void abb_iter_in_destruir(abb_iter_t* iter){
-	pila_destruir(iter->pila);
+	pila_destruir(iter->pila_abb);
 	free(iter);
 }
 
