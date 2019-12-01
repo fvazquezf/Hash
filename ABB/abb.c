@@ -211,8 +211,10 @@ bool iterar_in_order(nodo_t* raiz,visitar_t visitar, void* extra, const char* in
 		if (iterar_in_order(raiz->izq,visitar,extra, ini, fin, comparar) == false){
 			return false;
 		}
-		if (visitar(raiz->clave,raiz->dato,extra, ini, fin, comparar) == false){
-			return false;
+		if(comparar(raiz->clave, fin) <= 0){
+			if (visitar(raiz->clave,raiz->dato,extra) == false){
+				return false;
+			}
 		}
 	}
 	if(comparar(raiz->clave, fin) <= 0){
@@ -275,3 +277,26 @@ void abb_iter_in_destruir(abb_iter_t* iter){
 	pila_destruir(iter->pila);
 	free(iter);
 }
+/*
+bool visitar(const char* clave, void* dato, void* extra){
+	pila_apilar((pila_t*)extra, dato);
+	return true;
+}
+
+void pruebas_abb_interno(){
+	abb_t* abb = abb_crear(strcmp, NULL);
+
+	char* arreglo[11] = {"200", "100", "300", "50", "150", "250", "350", "125", "175", "225", "275"};
+	for(int i = 0; i < 11; i++ ){
+		abb_guardar(abb, arreglo[i], arreglo[i]);
+	}
+	pila_t* pila = pila_crear();
+	abb_in_order_rango(abb, visitar, (void*)pila, "175", "275");
+	while(!pila_esta_vacia(pila)){
+		printf("%s\n", (char*)pila_desapilar(pila));
+	}
+	pila_destruir(pila);
+	abb_destruir(abb);
+	return;
+}
+*/
