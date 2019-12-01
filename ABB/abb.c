@@ -98,7 +98,7 @@ void borrar(nodo_t** dir_nodo_busqueda, destruir_n destruir_nodo){
 		} else { //Busco al menor yendo todo izquierda
 			while (reemplazante->izq->izq != NULL){
 				reemplazante = reemplazante->izq;
-			}	
+			}
 			nodo_t* aux = reemplazante->izq;
 			borrar(&(reemplazante->izq),NULL);
 			reemplazante = aux;
@@ -118,7 +118,7 @@ void borrar(nodo_t** dir_nodo_busqueda, destruir_n destruir_nodo){
 /* ******************************************************************
  *                PRIMITIVAS DE ABB
  * *****************************************************************/
- 
+
 abb_t* abb_crear(abb_comparar_clave_t cmp, abb_destruir_dato_t destruir_dato){
 	abb_t* abb = malloc(sizeof(abb_t));
 	if (abb == NULL){
@@ -203,25 +203,30 @@ bool apilar_todo_izquierda(pila_t* pila, nodo_t* raiz){
 	return true;
 }
 
-bool iterar_in_order(nodo_t* raiz,visitar_t visitar, void* extra){
+bool iterar_in_order(nodo_t* raiz,visitar_t visitar, void* extra, const char* ini, const char* fin, abb_comparar_clave_t comparar){
 	if (raiz == NULL){
-		return true;	
-	} 
-	if (iterar_in_order(raiz->izq,visitar,extra) == false){
-		return false;
+		return true;
 	}
-	if (visitar(raiz->clave,raiz->dato,extra) == false){
-		return false;
+	if(comparar(raiz->clave, ini) >= 0){
+		if (iterar_in_order(raiz->izq,visitar,extra, ini, fin, comparar) == false){
+			return false;
+		}
+		if (visitar(raiz->clave,raiz->dato,extra, ini, fin, comparar) == false){
+			return false;
+		}
 	}
-	return iterar_in_order(raiz->der,visitar, extra);
+	if(comparar(raiz->clave, fin) <= 0){
+		return iterar_in_order(raiz->der,visitar, extra, ini, fin, comparar);
+	}
+	return false;
 }
 
 /* ******************************************************************
  *                PRIMITIVAS DE ABB ITERADOR INTERNO
  * *****************************************************************/
 
-void abb_in_order(abb_t *arbol, bool visitar(const char *, void *, void *), void *extra){
-	iterar_in_order(arbol->raiz,visitar,extra);
+void abb_in_order_rango(abb_t *arbol, bool visitar(const char *, void *, void *), void *extra, const char* ini, const char* fin){
+	iterar_in_order(arbol->raiz,visitar,extra, ini, fin, arbol->comparar);
 }
 
 /* ******************************************************************
@@ -231,8 +236,8 @@ void abb_in_order(abb_t *arbol, bool visitar(const char *, void *, void *), void
 abb_iter_t *abb_iter_in_crear(const abb_t *arbol){
 	abb_iter_t* iter = malloc(sizeof(abb_iter_t));
 	if (iter == NULL){
-		return NULL;	
-	} 
+		return NULL;
+	}
 	pila_t* pila = pila_crear();
 	if (pila == NULL){
 		free(iter);
@@ -270,5 +275,3 @@ void abb_iter_in_destruir(abb_iter_t* iter){
 	pila_destruir(iter->pila);
 	free(iter);
 }
-
-

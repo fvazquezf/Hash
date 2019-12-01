@@ -7,7 +7,7 @@
 /* ******************************************************************
  *                DEFINICION DE LOS TIPOS DE DATOS
  * *****************************************************************/
- 
+
 typedef struct abb abb_t;
 
 typedef int (*abb_comparar_clave_t) (const char *, const char *);
@@ -56,14 +56,14 @@ void abb_destruir(abb_t *arbol);
 /* ******************************************************************
  *                    PRIMITIVAS DE ITERADOR INTERNO
  * *****************************************************************/
- 
+
 // Recorre los elementos de; abb. Si recibe la funcion visitar por parametro
 // la aplica para los valores recorridos. Extra es un parametro de visitar que se
 // pasa a la funcion para ser usada dentro del iterador.
 // Pre: el abb fue creado. visitar es una funcion valida y extra un valor
 // correspondiente a la funcion visitar.
 // Post: se aplico visitar a todos los valores previstos.
-void abb_in_order(abb_t *arbol, bool visitar(const char *, void *, void *), void *extra);
+void abb_in_order_rango(abb_t *arbol, bool visitar(const char *, void *, void *), void *extra, const char* ini, const char* fin);
 
 /* ******************************************************************
  *                    PRIMITIVAS DE ITERADOR EXTERNO
